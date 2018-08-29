@@ -4,11 +4,23 @@ using UnityEngine;
 
 public class LaserPointer : MonoBehaviour {
 
+    // Variables for the laser
     private SteamVR_TrackedObject trackedObj;
     public GameObject laserPrefab;
     private GameObject laser;
     private Transform laserTransform;
     private Vector3 hitPoint;
+
+    // Variables for the teleportation system
+    public Transform cameraRigTransform;
+    public GameObject teleportationReticlePrefab;
+    private GameObject reticle;
+    private Transform teleportReticleTransform;
+    public Transform headTransform;
+    public Vector3 teleportReticleOffest;
+    public LayerMask teleportMask;
+    private bool shouldTeleport;
+
 
     private SteamVR_Controller.Device Controller
     {
@@ -25,13 +37,46 @@ public class LaserPointer : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		
+        laser = Instantiate(laserPrefab);
+        laserTransform = laser.transform;
+        reticle = Instantiate(teleportationReticlePrefab);
+        teleportReticleTransform = reticle.transform;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		
+        if (Controller.GetPress(SteamVR_Controller.ButtonMask.Touchpad))
+        {
+            RaycastHit hit;
+            if(Physics.Raycast(trackedObj.transform.position, transform.forward, out hit, 100, teleportMask))
+            {
+                hitPoint = hit.point;
+                ShowLaser(hit);
+                reticle.SetActive(true);
+                teleportReticleTransform.position = hitPoint + teleportReticleOffest;
+                shouldTeleport = true;
+            }
+        }
+        else
+        {
+            laser.SetActive(false);
+            reticle.SetActive(false);
+        }
+
+        if(Controller.GetPressUp(SteamVR_Controller.ButtonMask.Touchpad) && shouldTeleport)
+        {
+            Teleport();
+        }
 	}
+
+    private void Teleport()
+    {
+        shouldTeleport = false;
+        reticle.SetActive(false);
+        Vector3 difference = cameraRigTransform.position - headTransform.position;
+        difference.y = 0;
+        cameraRigTransform.position = hitPoint + difference;
+    }
 
     private void ShowLaser(RaycastHit hit)
     {
